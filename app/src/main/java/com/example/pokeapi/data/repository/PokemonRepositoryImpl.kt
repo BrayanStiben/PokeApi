@@ -42,7 +42,8 @@ class PokemonRepositoryImpl @Inject constructor(
                     id = entity.id,
                     name = entity.name,
                     imageUrl = entity.imageUrl,
-                    types = if (entity.types.isNotBlank()) entity.types.split(",") else emptyList()
+                    types = if (entity.types.isNotBlank()) entity.types.split(",") else emptyList(),
+                    isFavorite = entity.isFavorite
                 )
             }
         }
@@ -65,11 +66,12 @@ class PokemonRepositoryImpl @Inject constructor(
                         weight = localEntity.weight,
                         abilities = localEntity.abilities.split(","),
                         stats = stats,
-                        description = localEntity.description
+                        description = localEntity.description,
+                        moves = localEntity.moves.split(",").filter { it.isNotBlank() },
+                        isFavorite = localEntity.isFavorite
                     )
                 )
             } else {
-                // Sincronizado con PokeApi.kt
                 val detailDto = api.getPokemonDetail(id.toString())
                 val speciesDto = api.getPokemonSpecies(id)
                 val description = speciesDto.flavorTextEntries
@@ -87,7 +89,9 @@ class PokemonRepositoryImpl @Inject constructor(
                         height = pokemon.height,
                         weight = pokemon.weight,
                         abilities = pokemon.abilities.joinToString(","),
-                        description = pokemon.description
+                        description = pokemon.description,
+                        moves = pokemon.moves.joinToString(","),
+                        isFavorite = localEntity?.isFavorite ?: false
                     )
                     db.pokemonDao().insertAll(listOf(entity))
                     
@@ -101,7 +105,7 @@ class PokemonRepositoryImpl @Inject constructor(
                     db.pokemonDao().insertStats(statsEntities)
                 }
                 
-                Result.success(pokemon)
+                Result.success(pokemon.copy(isFavorite = localEntity?.isFavorite ?: false))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -115,5 +119,23 @@ class PokemonRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    override fun getFavoritePokemons(): Flow<List<Pokemon>> {
+        return db.pokemonDao().getFavoritePokemons().map { entities ->
+            entities.map { entity ->
+                Pokemon(
+                    id = entity.id,
+                    name = entity.name,
+                    imageUrl = entity.imageUrl,
+                    types = entity.types.split(",").filter { it.isNotBlank() },
+                    isFavorite = true
+                )
+            }
+        }
+    }
+
+    override suspend fun toggleFavorite(id: Int, isFavorite: Boolean) {
+        db.pokemonDao().updateFavoriteStatus(id, isFavorite)
     }
 }

@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.PokeApi" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Usamos un tema base de Android que no requiere librerías adicionales para evitar errores de compilación -->
+    <style name="Theme.PokeApi" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#3B7CBE</item>
+    </style>
 </resources>

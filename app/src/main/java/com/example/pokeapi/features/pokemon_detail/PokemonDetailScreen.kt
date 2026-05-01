@@ -3,11 +3,11 @@ package com.example.pokeapi.features.pokemon_detail
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -15,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -24,6 +25,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.pokeapi.domain.model.Pokemon
+import com.example.pokeapi.domain.model.PokemonStat
+import com.example.pokeapi.features.pokemon_list.getPokemonTypeColor
 
 @Composable
 fun PokemonDetailScreen(
@@ -32,175 +35,134 @@ fun PokemonDetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    PokemonDetailContent(
-        state = state,
-        onEvent = viewModel::onEvent,
-        onBackClick = onBackClick
+    Scaffold(
+        bottomBar = {
+            NavigationBar(containerColor = Color.White) {
+                NavigationBarItem(selected = true, onClick = {}, icon = { Icon(Icons.Default.Explore, null) }, label = { Text("Explorer") })
+                NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Favorite, null) }, label = { Text("Favorites") })
+                NavigationBarItem(selected = false, onClick = {}, icon = { Icon(Icons.Default.Person, null) }, label = { Text("Trainer") })
+            }
+        }
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding).background(Color.White)) {
+            if (state.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            } else if (state.pokemon != null) {
+                DetailContent(pokemon = state.pokemon!!, onBackClick = onBackClick)
+            }
+        }
+    }
+}
+
+@Composable
+fun DetailContent(pokemon: Pokemon, onBackClick: () -> Unit) {
+    val primaryColor = getPokemonTypeColor(pokemon.types.firstOrNull() ?: "")
+    
+    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        // Header con degradado y nombre
+        Box(modifier = Modifier.fillMaxWidth().height(260.dp).background(Brush.verticalGradient(listOf(primaryColor, primaryColor.copy(0.6f))))) {
+            Column(modifier = Modifier.padding(top = 40.dp, start = 20.dp, end = 20.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    IconButton(onClick = onBackClick) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
+                    IconButton(onClick = {}) { Icon(Icons.Default.FavoriteBorder, null, tint = Color.White) }
+                }
+                Text(pokemon.name.uppercase(), color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                Text("#${pokemon.id.toString().padStart(3, '0')}", color = Color.White.copy(0.8f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            }
+            AsyncImage(
+                model = pokemon.imageUrl,
+                contentDescription = null,
+                modifier = Modifier.size(200.dp).align(Alignment.BottomCenter).offset(y = 40.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(50.dp))
+
+        Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+            // ABOUT
+            SectionHeader("ABOUT")
+            InfoCard {
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    DetailInfoItem(Icons.Default.LocalFireDepartment, "Type", pokemon.types.joinToString(" / "), Modifier.weight(1f))
+                    DetailInfoItem(Icons.Default.Height, "Height", "${pokemon.height / 10.0} m", Modifier.weight(1f))
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    DetailInfoItem(Icons.Default.MonitorWeight, "Weight", "${pokemon.weight / 10.0} kg", Modifier.weight(1f))
+                    DetailInfoItem(Icons.Default.Face, "Abilities", pokemon.abilities.take(2).joinToString(", "), Modifier.weight(1f))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // STATS
+            SectionHeader("BASE STATS")
+            InfoCard {
+                pokemon.stats.forEach { stat ->
+                    StatRow(stat, primaryColor)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // MOVES (TOP 3)
+            SectionHeader("MOVES (TOP 3)")
+            pokemon.moves.take(3).forEach { move ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.OfflineBolt, null, tint = primaryColor, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(move.uppercase(), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(title: String) {
+    Text(title, fontSize = 12.sp, fontWeight = FontWeight.Black, color = Color.Gray, modifier = Modifier.padding(bottom = 8.dp))
+}
+
+@Composable
+fun InfoCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
+        shape = RoundedCornerShape(16.dp),
+        content = content
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PokemonDetailContent(
-    state: PokemonDetailState,
-    onEvent: (PokemonDetailEvent) -> Unit,
-    onBackClick: () -> Unit
-) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(state.pokemon?.name ?: "Pokemon Details") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            if (state.isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            } else if (state.error != null) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = state.error,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(16.dp)
-                    )
-                    Button(onClick = { onEvent(PokemonDetailEvent.OnRetry) }) {
-                        Icon(Icons.Default.Refresh, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Retry")
-                    }
-                }
-            } else if (state.pokemon != null) {
-                PokemonInfo(pokemon = state.pokemon)
-            }
+fun DetailInfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, modifier: Modifier) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = Color.Gray, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
+            Text(label, fontSize = 10.sp, color = Color.Gray)
+            Text(value, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 @Composable
-fun PokemonInfo(pokemon: Pokemon) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        AsyncImage(
-            model = pokemon.imageUrl,
-            contentDescription = pokemon.name,
-            modifier = Modifier
-                .size(200.dp)
-                .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentScale = ContentScale.Fit
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(
-            text = pokemon.name,
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            pokemon.types.forEach { type ->
-                SuggestionChip(
-                    onClick = { },
-                    label = { Text(type.replaceFirstChar { it.uppercase() }) }
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            InfoColumn(label = "Weight", value = "${pokemon.weight / 10.0} kg")
-            InfoColumn(label = "Height", value = "${pokemon.height / 10.0} m")
-        }
-        
-        if (pokemon.description.isNotBlank()) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Description",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Start
-            )
-            Text(
-                text = pokemon.description,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Justify
-            )
-        }
-        
-        if (pokemon.stats.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                text = "Stats",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Start
-            )
-            pokemon.stats.forEach { stat ->
-                StatRow(name = stat.name, value = stat.value)
-            }
-        }
-    }
-}
-
-@Composable
-fun InfoColumn(label: String, value: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = value, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Text(text = label, style = MaterialTheme.typography.labelMedium)
-    }
-}
-
-@Composable
-fun StatRow(name: String, value: Int) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = name.uppercase(),
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.labelSmall
-        )
+fun StatRow(stat: PokemonStat, color: Color) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(stat.name.uppercase(), modifier = Modifier.width(70.dp), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
         LinearProgressIndicator(
-            progress = { value / 150f },
-            modifier = Modifier
-                .weight(2f)
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
+            progress = { stat.value / 150f },
+            modifier = Modifier.weight(1f).height(8.dp).clip(CircleShape),
+            color = color,
+            trackColor = color.copy(0.1f)
         )
-        Text(
-            text = value.toString(),
-            modifier = Modifier.width(40.dp),
-            textAlign = TextAlign.End,
-            style = MaterialTheme.typography.bodySmall
-        )
+        Text(stat.value.toString(), modifier = Modifier.width(35.dp), textAlign = TextAlign.End, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }

@@ -14,6 +14,8 @@ fun PokemonDetailDto.toPokemon(description: String = ""): Pokemon {
         weight = weight,
         abilities = abilities.map { it.ability.name },
         stats = stats.map { PokemonStat(it.stat.name, it.baseStat) },
-        description = description
+        description = description,
+        // Tomamos los primeros 3 movimientos para el diseño
+        moves = moves.take(3).map { it.move.name.replace("-", " ") }
     )
 }

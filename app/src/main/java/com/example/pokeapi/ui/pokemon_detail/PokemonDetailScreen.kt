@@ -24,6 +24,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.pokeapi.domain.model.Pokemon
+import com.example.pokeapi.features.pokemon_detail.PokemonDetailViewModel
+import com.example.pokeapi.features.pokemon_detail.PokemonDetailState
+import com.example.pokeapi.features.pokemon_detail.PokemonDetailEvent
 
 @Composable
 fun PokemonDetailScreen(

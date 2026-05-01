@@ -8,4 +8,8 @@ interface PokemonRepository {
     fun getPokemons(query: String = "", type: String? = null): Flow<PagingData<Pokemon>>
     suspend fun getPokemonDetail(id: Int): Result<Pokemon>
     suspend fun getTypes(): Result<List<String>>
+    
+    // Favoritos
+    fun getFavoritePokemons(): Flow<List<Pokemon>>
+    suspend fun toggleFavorite(id: Int, isFavorite: Boolean)
 }

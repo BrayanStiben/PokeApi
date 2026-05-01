@@ -3,194 +3,163 @@ package com.example.pokeapi.features.pokemon_list
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
 import coil.compose.AsyncImage
 import com.example.pokeapi.domain.model.Pokemon
-import com.example.pokeapi.core.utils.ConnectivityObserver
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PokemonListScreen(
     onPokemonClick: (Int) -> Unit,
+    onFavoritesClick: () -> Unit,
+    onTrainerClick: () -> Unit,
     viewModel: PokemonListViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val pokemons = viewModel.pokemons.collectAsLazyPagingItems()
 
-    PokemonListContent(
-        state = state,
-        pokemons = pokemons,
-        onEvent = viewModel::onEvent,
-        onPokemonClick = onPokemonClick
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PokemonListContent(
-    state: PokemonListState,
-    pokemons: androidx.paging.compose.LazyPagingItems<Pokemon>,
-    onEvent: (PokemonListEvent) -> Unit,
-    onPokemonClick: (Int) -> Unit
-) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("PokeApi Explorer") },
+            CenterAlignedTopAppBar(
+                title = { 
+                    Text("POKÉDEX EXPLORER", fontWeight = FontWeight.Black, color = Color.White) 
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color(0xFF3B7CBE)),
                 actions = {
-                    val statusText = when (state.networkStatus) {
-                        ConnectivityObserver.Status.Available -> "Online"
-                        else -> "Offline"
-                    }
-                    val statusColor = when (state.networkStatus) {
-                        ConnectivityObserver.Status.Available -> Color.Green
-                        else -> Color.Red
-                    }
-                    Surface(
-                        color = statusColor.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(
-                            text = statusText,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = statusColor
-                        )
+                    IconButton(onClick = onTrainerClick) {
+                        Icon(Icons.Default.Person, contentDescription = null, tint = Color.White)
                     }
                 }
             )
+        },
+        bottomBar = {
+            NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
+                NavigationBarItem(
+                    selected = true,
+                    onClick = { },
+                    icon = { Icon(Icons.Default.Explore, null) },
+                    label = { Text("Explorer") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onFavoritesClick,
+                    icon = { Icon(Icons.Default.Favorite, null) },
+                    label = { Text("Favorites") }
+                )
+                NavigationBarItem(
+                    selected = false,
+                    onClick = onTrainerClick,
+                    icon = { Icon(Icons.Default.Person, null) },
+                    label = { Text("Trainer") }
+                )
+            }
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { }, containerColor = Color(0xFF3B7CBE), shape = CircleShape) {
+                Icon(Icons.Default.CatchingPokemon, null, tint = Color.White, modifier = Modifier.size(30.dp))
+            }
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .background(Color(0xFFF0F3F6))
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Buscador y Filtros
+            Card(
+                modifier = Modifier.padding(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                elevation = CardDefaults.cardElevation(2.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                TextField(
-                    value = state.searchQuery,
-                    onValueChange = { onEvent(PokemonListEvent.OnSearchQueryChange(it)) },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Search Name/ID...") },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = TextFieldDefaults.colors(
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    ),
-                    singleLine = true
-                )
-                
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                Box {
-                    IconButton(onClick = { onEvent(PokemonListEvent.OnToggleTypeDropdown) }) {
-                        Icon(
-                            Icons.Default.FilterList, 
-                            contentDescription = "Filter",
-                            tint = if (state.selectedType != null) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = state.isTypeDropdownExpanded,
-                        onDismissRequest = { onEvent(PokemonListEvent.OnToggleTypeDropdown) }
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("SEARCH BY NAME OR ID", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = state.searchQuery,
+                        onValueChange = { viewModel.onEvent(PokemonListEvent.OnSearchQueryChange(it)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text("Pikachu...") },
+                        leadingIcon = { Icon(Icons.Default.Search, null) },
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("All Types") },
-                            onClick = { onEvent(PokemonListEvent.OnTypeSelected(null)) }
-                        )
-                        state.types.forEach { type ->
-                            DropdownMenuItem(
-                                text = { Text(type.replaceFirstChar { it.uppercase() }) },
-                                onClick = { onEvent(PokemonListEvent.OnTypeSelected(type)) }
+                        Text("FILTER BY TYPE", fontSize = 10.sp, fontWeight = FontWeight.Black, color = Color.Gray)
+                        TextButton(onClick = { viewModel.onEvent(PokemonListEvent.OnTypeSelected(null)) }) {
+                            Text("RESET FILTERS", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(state.types) { type ->
+                            FilterChip(
+                                selected = state.selectedType == type,
+                                onClick = { 
+                                    viewModel.onEvent(PokemonListEvent.OnTypeSelected(if (state.selectedType == type) null else type)) 
+                                },
+                                label = { Text(type.replaceFirstChar { it.uppercase() }) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = getPokemonTypeColor(type),
+                                    selectedLabelColor = Color.White,
+                                    containerColor = Color(0xFFF5F5F5)
+                                ),
+                                border = null
                             )
                         }
                     }
                 }
             }
 
-            if (state.selectedType != null) {
-                InputChip(
-                    selected = true,
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    onClick = { onEvent(PokemonListEvent.OnTypeSelected(null)) },
-                    label = { Text("Type: ${state.selectedType.replaceFirstChar { it.uppercase() }}") },
-                    trailingIcon = { 
-                        Icon(
-                            imageVector = Icons.Default.Close, 
-                            contentDescription = "Clear filter", 
-                            modifier = Modifier.size(18.dp)
-                        ) 
-                    }
-                )
-            }
-
+            // Grid de Pokemon
             Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(
-                        count = pokemons.itemCount,
-                    ) { index ->
-                        val pokemon = pokemons[index]
-                        if (pokemon != null) {
-                            PokemonItem(
-                                pokemon = pokemon,
-                                onClick = { onPokemonClick(pokemon.id) }
-                            )
-                        }
-                    }
-
-                    item {
-                        if (pokemons.loadState.append is LoadState.Loading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp)
-                                    .wrapContentWidth(Alignment.CenterHorizontally)
-                            )
-                        }
-                    }
-                }
-
                 if (pokemons.loadState.refresh is LoadState.Loading) {
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                } else if (pokemons.itemCount == 0) {
+                    Text("No results found", modifier = Modifier.align(Alignment.Center), color = Color.Gray)
                 }
 
-                if (pokemons.loadState.refresh is LoadState.Error) {
-                    val error = (pokemons.loadState.refresh as LoadState.Error).error
-                    Text(
-                        text = "Error: ${error.message}",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(16.dp)
-                    )
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    contentPadding = PaddingValues(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(pokemons.itemCount) { index ->
+                        pokemons[index]?.let { pokemon ->
+                            PokemonCard(pokemon = pokemon, onClick = { onPokemonClick(pokemon.id) })
+                        }
+                    }
                 }
             }
         }
@@ -198,45 +167,82 @@ fun PokemonListContent(
 }
 
 @Composable
-fun PokemonItem(
-    pokemon: Pokemon,
-    onClick: () -> Unit
-) {
+fun PokemonCard(pokemon: Pokemon, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(1.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            AsyncImage(
-                model = pokemon.imageUrl,
-                contentDescription = pokemon.name,
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentScale = ContentScale.Fit
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
+            Box(modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    text = "#${pokemon.id.toString().padStart(3, '0')}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.secondary
+                    "#${pokemon.id.toString().padStart(3, '0')}",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.LightGray
                 )
-                Text(
-                    text = pokemon.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                Icon(
+                    Icons.Default.FavoriteBorder, null,
+                    modifier = Modifier.size(16.dp).align(Alignment.TopEnd),
+                    tint = Color.Red.copy(alpha = 0.3f)
                 )
             }
+            AsyncImage(
+                model = pokemon.imageUrl,
+                contentDescription = null,
+                modifier = Modifier.size(100.dp),
+                contentScale = ContentScale.Fit
+            )
+            Text(
+                pokemon.name.uppercase(),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                pokemon.types.forEach { type ->
+                    Surface(
+                        color = getPokemonTypeColor(type),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            type.uppercase(),
+                            color = Color.White,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
         }
+    }
+}
+
+fun getPokemonTypeColor(type: String): Color {
+    return when (type.lowercase()) {
+        "fire" -> Color(0xFFFF421C)
+        "water" -> Color(0xFF5CBEFA)
+        "grass" -> Color(0xFF5FBD58)
+        "poison" -> Color(0xFF924593)
+        "electric" -> Color(0xFFF2D94E)
+        "psychic" -> Color(0xFFF65687)
+        "ice" -> Color(0xFF51C4E7)
+        "dragon" -> Color(0xFF5366D3)
+        "fairy" -> Color(0xFFE29FE9)
+        "bug" -> Color(0xFF92BC2C)
+        "ground" -> Color(0xFFDA7C4D)
+        "rock" -> Color(0xFFB9A156)
+        "ghost" -> Color(0xFF705898)
+        "steel" -> Color(0xFFB8B8D0)
+        "fighting" -> Color(0xFFC03028)
+        "normal" -> Color(0xFFA8A878)
+        "flying" -> Color(0xFFA890F0)
+        else -> Color(0xFF3B7CBE)
     }
 }

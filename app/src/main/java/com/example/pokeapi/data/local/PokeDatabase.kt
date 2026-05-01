@@ -1,2 +1,3 @@
 package com.example.pokeapi.data.local
-// Moved to com.example.pokeapi.data.PokeDatabase
+// Archivo duplicado desactivado. 
+// La base de datos principal está en com.example.pokeapi.data.PokeDatabase

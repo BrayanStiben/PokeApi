@@ -15,7 +15,9 @@ data class PokemonEntity(
     val height: Int,
     val weight: Int,
     val abilities: String,
-    val description: String
+    val description: String,
+    val moves: String = "",
+    val isFavorite: Boolean = false // Nuevo campo para favoritos
 )
 
 @Entity(tableName = "pokemon_stat_table")
@@ -34,7 +36,6 @@ data class RemoteKeysEntity(
 )
 
 // --- DTOs (Retrofit) ---
-
 data class PokemonListResponse(val results: List<PokemonSimpleDto>)
 data class PokemonSimpleDto(val name: String, val url: String)
 
@@ -46,8 +47,12 @@ data class PokemonDetailDto(
     val sprites: SpritesDto,
     val types: List<TypeSlotDto>,
     val abilities: List<AbilitySlotDto>,
-    val stats: List<StatSlotDto>
+    val stats: List<StatSlotDto>,
+    val moves: List<MoveSlotDto>
 )
+
+data class MoveSlotDto(val move: MoveDto)
+data class MoveDto(val name: String)
 
 data class SpritesDto(
     @SerializedName("front_default") val frontDefault: String?,
@@ -69,10 +74,5 @@ data class LanguageDto(val name: String)
 data class TypeListResponse(val results: List<TypeItemDto>)
 data class TypeItemDto(val name: String, val url: String)
 
-data class TypeDetailResponse(
-    val pokemon: List<TypePokemonSlotDto>
-)
-
-data class TypePokemonSlotDto(
-    val pokemon: PokemonSimpleDto
-)
+data class TypeDetailResponse(val pokemon: List<TypePokemonSlotDto>)
+data class TypePokemonSlotDto(val pokemon: PokemonSimpleDto)

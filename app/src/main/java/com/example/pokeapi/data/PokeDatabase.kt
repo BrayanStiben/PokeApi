@@ -10,10 +10,11 @@ import androidx.room.RoomDatabase
 import com.example.pokeapi.data.model.PokemonEntity
 import com.example.pokeapi.data.model.PokemonStatEntity
 import com.example.pokeapi.data.model.RemoteKeysEntity
+import kotlinx.coroutines.flow.Flow
 
 @Database(
     entities = [PokemonEntity::class, PokemonStatEntity::class, RemoteKeysEntity::class],
-    version = 1,
+    version = 3, // Incrementado a 3 para incluir isFavorite
     exportSchema = false
 )
 abstract class PokeDatabase : RoomDatabase() {
@@ -42,12 +43,21 @@ interface PokemonDao {
 
     @Query("SELECT * FROM pokemon_table WHERE id = :id")
     suspend fun getPokemonById(id: Int): PokemonEntity?
+    
+    @Query("SELECT * FROM pokemon_table WHERE id = :id")
+    fun getPokemonByIdFlow(id: Int): Flow<PokemonEntity?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertStats(stats: List<PokemonStatEntity>)
 
     @Query("SELECT * FROM pokemon_stat_table WHERE pokemonId = :pokemonId")
     suspend fun getStatsForPokemon(pokemonId: Int): List<PokemonStatEntity>
+
+    @Query("UPDATE pokemon_table SET isFavorite = :isFavorite WHERE id = :id")
+    suspend fun updateFavoriteStatus(id: Int, isFavorite: Boolean)
+
+    @Query("SELECT * FROM pokemon_table WHERE isFavorite = 1 ORDER BY id ASC")
+    fun getFavoritePokemons(): Flow<List<PokemonEntity>>
 }
 
 @Dao
