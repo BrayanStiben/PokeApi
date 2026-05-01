@@ -25,16 +25,8 @@ class PokemonRemoteMediator(
         state: PagingState<Int, PokemonEntity>
     ): MediatorResult {
         val page = when (loadType) {
-            LoadType.REFRESH -> {
-                val remoteKeys = getRemoteKeyClosestToCurrentPosition(state)
-                remoteKeys?.nextKey?.minus(1) ?: 0
-            }
-            LoadType.PREPEND -> {
-                val remoteKeys = getRemoteKeyForFirstItem(state)
-                val prevKey = remoteKeys?.prevKey
-                    ?: return MediatorResult.Success(endOfPaginationReached = remoteKeys != null)
-                prevKey
-            }
+            LoadType.REFRESH -> 0
+            LoadType.PREPEND -> return MediatorResult.Success(endOfPaginationReached = true)
             LoadType.APPEND -> {
                 val remoteKeys = getRemoteKeyForLastItem(state)
                 val nextKey = remoteKeys?.nextKey
@@ -44,58 +36,64 @@ class PokemonRemoteMediator(
         }
 
         try {
-            val pokemonEntities: List<PokemonEntity>
-            val endOfPaginationReached: Boolean
+            val pokemonEntities = mutableListOf<PokemonEntity>()
+            var endOfPaginationReached = false
 
-            if (type != null && loadType == LoadType.REFRESH) {
-                // Special case: Filter by type
-                val typeResponse = api.getPokemonByType(type)
-                pokemonEntities = typeResponse.pokemon.map { slot ->
-                    val id = slot.pokemon.url.split("/").filter { it.isNotEmpty() }.last().toInt()
-                    PokemonEntity(
-                        id = id,
-                        name = slot.pokemon.name.replaceFirstChar { it.uppercase() },
-                        imageUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/$id.png",
-                        types = type, // Fill the type so the local filter finds it
-                        height = 0,
-                        weight = 0,
-                        abilities = "",
-                        description = ""
-                    )
+            // IMPORTANTE: Si es REFRESH, limpiamos la DB para el nuevo filtro/búsqueda
+            if (loadType == LoadType.REFRESH) {
+                db.withTransaction {
+                    db.remoteKeysDao().clearRemoteKeys()
+                    db.pokemonDao().clearAll()
                 }
-                endOfPaginationReached = true // We got all for this type in one go
-            } else if (type != null) {
-                // If we already loaded a type list, there's no more paging for now
-                return MediatorResult.Success(endOfPaginationReached = true)
+
+                if (type != null) {
+                    // Carga por TIPO (la API devuelve todos los de ese tipo)
+                    val typeResponse = api.getPokemonByType(type)
+                    pokemonEntities.addAll(typeResponse.pokemon.map { slot ->
+                        val id = slot.pokemon.url.split("/").filter { it.isNotEmpty() }.last().toInt()
+                        PokemonEntity(
+                            id = id,
+                            name = slot.pokemon.name.replaceFirstChar { it.uppercase() },
+                            imageUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/$id.png",
+                            types = type, // Rellenamos el tipo para que el DAO lo encuentre
+                            height = 0, weight = 0, abilities = "", description = ""
+                        )
+                    })
+                    endOfPaginationReached = true 
+                } else if (query.isNotBlank()) {
+                    // Búsqueda específica
+                    try {
+                        val detail = api.getPokemonDetail(query.lowercase().trim())
+                        pokemonEntities.add(PokemonEntity(
+                            id = detail.id,
+                            name = detail.name.replaceFirstChar { it.uppercase() },
+                            imageUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${detail.id}.png",
+                            types = detail.types.joinToString(",") { it.type.name },
+                            height = detail.height, weight = detail.weight, abilities = "", description = ""
+                        ))
+                        endOfPaginationReached = true
+                    } catch (e: Exception) {
+                        // Si falla la búsqueda exacta, cargamos los primeros 100
+                        val apiResponse = api.getPokemonList(100, 0)
+                        pokemonEntities.addAll(apiResponse.results.map { mapToEntity(it.name, it.url) })
+                        endOfPaginationReached = false
+                    }
+                } else {
+                    // Carga normal
+                    val apiResponse = api.getPokemonList(state.config.pageSize, 0)
+                    pokemonEntities.addAll(apiResponse.results.map { mapToEntity(it.name, it.url) })
+                    endOfPaginationReached = apiResponse.results.isEmpty()
+                }
             } else {
-                // Normal sequential paging (or searching in a larger set)
-                // If it's a REFRESH and we have a query, we might want a bigger page to find results
-                val limit = if (loadType == LoadType.REFRESH && query.isNotBlank()) 100 else state.config.pageSize
-                val offset = page * state.config.pageSize
+                // APPEND secuencial
+                if (type != null) return MediatorResult.Success(endOfPaginationReached = true)
                 
-                val apiResponse = api.getPokemonList(limit, offset)
-                pokemonEntities = apiResponse.results.map { simpleDto ->
-                    val id = simpleDto.url.split("/").filter { it.isNotEmpty() }.last().toInt()
-                    PokemonEntity(
-                        id = id,
-                        name = simpleDto.name.replaceFirstChar { it.uppercase() },
-                        imageUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/$id.png",
-                        types = "",
-                        height = 0,
-                        weight = 0,
-                        abilities = "",
-                        description = ""
-                    )
-                }
+                val apiResponse = api.getPokemonList(state.config.pageSize, page * state.config.pageSize)
+                pokemonEntities.addAll(apiResponse.results.map { mapToEntity(it.name, it.url) })
                 endOfPaginationReached = apiResponse.results.isEmpty()
             }
 
             db.withTransaction {
-                if (loadType == LoadType.REFRESH) {
-                    db.remoteKeysDao().clearRemoteKeys()
-                    db.pokemonDao().clearAll()
-                }
-                
                 val prevKey = if (page == 0) null else page - 1
                 val nextKey = if (endOfPaginationReached) null else page + 1
                 
@@ -113,23 +111,23 @@ class PokemonRemoteMediator(
         }
     }
 
+    private fun mapToEntity(name: String, url: String): PokemonEntity {
+        val id = url.split("/").filter { it.isNotEmpty() }.last().toInt()
+        return PokemonEntity(
+            id = id,
+            name = name.replaceFirstChar { it.uppercase() },
+            imageUrl = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/$id.png",
+            types = "", 
+            height = 0, weight = 0, abilities = "", description = ""
+        )
+    }
+
     private suspend fun getRemoteKeyForLastItem(state: PagingState<Int, PokemonEntity>): RemoteKeysEntity? {
         return state.pages.lastOrNull { it.data.isNotEmpty() }?.data?.lastOrNull()
-            ?.let { pokemon ->
-                db.remoteKeysDao().remoteKeysPokemonId(pokemon.id)
-            }
+            ?.let { pokemon -> db.remoteKeysDao().remoteKeysPokemonId(pokemon.id) }
     }
 
-    private suspend fun getRemoteKeyForFirstItem(state: PagingState<Int, PokemonEntity>): RemoteKeysEntity? {
-        return state.pages.firstOrNull { it.data.isNotEmpty() }?.data?.firstOrNull()
-            ?.let { pokemon ->
-                db.remoteKeysDao().remoteKeysPokemonId(pokemon.id)
-            }
-    }
-
-    private suspend fun getRemoteKeyClosestToCurrentPosition(
-        state: PagingState<Int, PokemonEntity>
-    ): RemoteKeysEntity? {
+    private suspend fun getRemoteKeyClosestToCurrentPosition(state: PagingState<Int, PokemonEntity>): RemoteKeysEntity? {
         return state.anchorPosition?.let { position ->
             state.closestItemToPosition(position)?.id?.let { id ->
                 db.remoteKeysDao().remoteKeysPokemonId(id)

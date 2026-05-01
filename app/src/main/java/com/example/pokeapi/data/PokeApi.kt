@@ -13,9 +13,9 @@ interface PokeApi {
         @Query("offset") offset: Int
     ): PokemonListResponse
 
-    @GET("pokemon/{id}")
-    suspend fun getPokemonDetailById(
-        @Path("id") id: Int
+    @GET("pokemon/{idOrName}")
+    suspend fun getPokemonDetail(
+        @Path("idOrName") idOrName: String
     ): PokemonDetailDto
 
     @GET("pokemon-species/{id}")

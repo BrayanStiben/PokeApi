@@ -1,6 +1,6 @@
 package com.example.pokeapi.data.mapper
 
-import com.example.pokeapi.data.remote.dto.PokemonDetailDto
+import com.example.pokeapi.data.model.PokemonDetailDto
 import com.example.pokeapi.domain.model.Pokemon
 import com.example.pokeapi.domain.model.PokemonStat
 

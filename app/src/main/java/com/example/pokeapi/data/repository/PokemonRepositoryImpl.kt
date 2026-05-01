@@ -34,7 +34,7 @@ class PokemonRepositoryImpl @Inject constructor(
                 pageSize = 20,
                 enablePlaceholders = false
             ),
-            remoteMediator = PokemonRemoteMediator(api, db),
+            remoteMediator = PokemonRemoteMediator(api, db, query, type),
             pagingSourceFactory = pagingSourceFactory
         ).flow.map { pagingData ->
             pagingData.map { entity ->
@@ -69,7 +69,7 @@ class PokemonRepositoryImpl @Inject constructor(
                     )
                 )
             } else {
-                val detailDto = api.getPokemonDetailById(id)
+                val detailDto = api.getPokemonDetail(id.toString())
                 val speciesDto = api.getPokemonSpecies(id)
                 val description = speciesDto.flavorTextEntries
                     .find { it.language.name == "en" }
