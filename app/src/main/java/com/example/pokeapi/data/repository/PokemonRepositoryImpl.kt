@@ -69,6 +69,7 @@ class PokemonRepositoryImpl @Inject constructor(
                     )
                 )
             } else {
+                // Sincronizado con PokeApi.kt
                 val detailDto = api.getPokemonDetail(id.toString())
                 val speciesDto = api.getPokemonSpecies(id)
                 val description = speciesDto.flavorTextEntries

@@ -23,13 +23,14 @@ class PokemonListViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val pokemons: Flow<PagingData<Pokemon>> = _state
-        .map { it.searchQuery }
-        .distinctUntilChanged()
-        .flatMapLatest { query ->
-            repository.getPokemons(query)
-        }
-        .cachedIn(viewModelScope)
+    val pokemons: Flow<PagingData<Pokemon>> = combine(
+        _state.map { it.searchQuery }.distinctUntilChanged(),
+        _state.map { it.selectedType }.distinctUntilChanged()
+    ) { query, type ->
+        query to type
+    }.flatMapLatest { (query, type) ->
+        repository.getPokemons(query, type)
+    }.cachedIn(viewModelScope)
 
     init {
         observeNetworkStatus()
