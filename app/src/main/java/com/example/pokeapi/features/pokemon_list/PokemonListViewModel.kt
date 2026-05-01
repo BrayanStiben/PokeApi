@@ -24,12 +24,13 @@ class PokemonListViewModel @Inject constructor(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val pokemons: Flow<PagingData<Pokemon>> = combine(
-        _state.map { it.searchQuery }.distinctUntilChanged(),
-        _state.map { it.selectedType }.distinctUntilChanged()
-    ) { query, type ->
-        query to type
-    }.flatMapLatest { (query, type) ->
-        repository.getPokemons(query, type)
+        _state.map { it.searchQuery }.distinctUntilChanged().debounce(500),
+        _state.map { it.selectedType }.distinctUntilChanged(),
+        _state.map { it.selectedCategory }.distinctUntilChanged()
+    ) { query, type, category ->
+        Triple(query, type, category)
+    }.flatMapLatest { (query, type, category) ->
+        repository.getPokemons(query, type, category)
     }.cachedIn(viewModelScope)
 
     init {
@@ -61,8 +62,16 @@ class PokemonListViewModel @Inject constructor(
             is PokemonListEvent.OnTypeSelected -> {
                 _state.update { it.copy(selectedType = event.type, isTypeDropdownExpanded = false) }
             }
+            is PokemonListEvent.OnCategorySelected -> {
+                _state.update { it.copy(selectedCategory = event.category) }
+            }
             PokemonListEvent.OnToggleTypeDropdown -> {
                 _state.update { it.copy(isTypeDropdownExpanded = !it.isTypeDropdownExpanded) }
+            }
+            is PokemonListEvent.OnToggleFavorite -> {
+                viewModelScope.launch {
+                    repository.toggleFavorite(event.pokemonId, event.isFavorite)
+                }
             }
         }
     }

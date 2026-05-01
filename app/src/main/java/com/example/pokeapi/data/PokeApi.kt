@@ -18,9 +18,9 @@ interface PokeApi {
         @Path("idOrName") idOrName: String
     ): PokemonDetailDto
 
-    @GET("pokemon-species/{id}")
+    @GET("pokemon-species/{idOrName}")
     suspend fun getPokemonSpecies(
-        @Path("id") id: Int
+        @Path("idOrName") idOrName: String
     ): PokemonSpeciesDto
 
     @GET("type")
@@ -30,6 +30,11 @@ interface PokeApi {
     suspend fun getPokemonByType(
         @Path("name") name: String
     ): TypeDetailResponse
+
+    @GET("move/{idOrName}")
+    suspend fun getMoveDetail(
+        @Path("idOrName") idOrName: String
+    ): MoveDetailDto
 
     companion object {
         const val BASE_URL = "https://pokeapi.co/api/v2/"

@@ -2,6 +2,7 @@ package com.example.pokeapi.data.mapper
 
 import com.example.pokeapi.data.model.PokemonDetailDto
 import com.example.pokeapi.domain.model.Pokemon
+import com.example.pokeapi.domain.model.PokemonMove
 import com.example.pokeapi.domain.model.PokemonStat
 
 fun PokemonDetailDto.toPokemon(description: String = ""): Pokemon {
@@ -15,7 +16,15 @@ fun PokemonDetailDto.toPokemon(description: String = ""): Pokemon {
         abilities = abilities.map { it.ability.name },
         stats = stats.map { PokemonStat(it.stat.name, it.baseStat) },
         description = description,
-        // Tomamos los primeros 3 movimientos para el diseño
-        moves = moves.take(3).map { it.move.name.replace("-", " ") }
+        moves = moves.map { 
+            val learnInfo = it.versionGroupDetails.firstOrNull()
+            PokemonMove(
+                name = it.move.name.replace("-", " "),
+                type = "", // No disponible en este DTO
+                damageClass = "", // No disponible en este DTO
+                learnMethod = learnInfo?.moveLearnMethod?.name ?: "unknown",
+                level = learnInfo?.levelLearnedAt ?: 0
+            )
+        }
     )
 }

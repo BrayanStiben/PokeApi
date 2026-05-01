@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -14,6 +16,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,32 +27,54 @@ import com.example.pokeapi.features.pokemon_list.PokemonCard
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesScreen(
-    onPokemonClick: (Int) -> Unit,
+    onPokemonClick: (Int, String) -> Unit,
     onBackClick: () -> Unit,
     viewModel: FavoritesViewModel = hiltViewModel()
 ) {
     val favorites by viewModel.favoritePokemons.collectAsState()
+    
+    val pokeRed = Color(0xFFE3350D)
+    val pokeWhite = Color.White
+    val pokeGrey = Color(0xFFF5F5F5)
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { 
-                    Text("MY FAVORITES", fontWeight = FontWeight.Black, color = Color.White) 
-                },
-                navigationIcon = {
+            Surface(
+                color = pokeRed,
+                shadowElevation = 8.dp,
+                shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver", tint = pokeWhite)
                     }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color(0xFF3B7CBE))
-            )
+                    
+                    Text(
+                        "MIS FAVORITOS",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Black,
+                        color = pokeWhite,
+                        letterSpacing = 1.sp
+                    )
+                    
+                    // Espaciador para equilibrar el botón de atrás
+                    Spacer(modifier = Modifier.size(48.dp))
+                }
+            }
         }
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFF0F3F6))
+                .background(pokeGrey)
         ) {
             if (favorites.isEmpty()) {
                 Column(
@@ -59,18 +84,19 @@ fun FavoritesScreen(
                     Icon(
                         imageVector = Icons.Default.Favorite,
                         contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = Color.LightGray
+                        modifier = Modifier.size(80.dp),
+                        tint = Color.LightGray.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "No favorites yet",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Gray
+                        "No tienes favoritos aún",
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.Gray,
+                        fontSize = 18.sp
                     )
                     Text(
-                        "Start catching some Pokemon!",
-                        fontSize = 12.sp,
+                        "¡Empieza a capturar Pokémon!",
+                        fontSize = 14.sp,
                         color = Color.Gray
                     )
                 }
@@ -85,7 +111,10 @@ fun FavoritesScreen(
                     items(favorites) { pokemon ->
                         PokemonCard(
                             pokemon = pokemon,
-                            onClick = { onPokemonClick(pokemon.id) }
+                            onClick = { onPokemonClick(pokemon.id, pokemon.name) },
+                            onFavoriteClick = { id, isFavorite ->
+                                viewModel.onToggleFavorite(id, isFavorite)
+                            }
                         )
                     }
                 }

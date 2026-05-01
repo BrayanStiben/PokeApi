@@ -1,6 +1,8 @@
 package com.example.pokeapi.core.di
 
+import com.example.pokeapi.data.repository.AuthRepositoryImpl
 import com.example.pokeapi.data.repository.PokemonRepositoryImpl
+import com.example.pokeapi.domain.repository.AuthRepository
 import com.example.pokeapi.domain.repository.PokemonRepository
 import dagger.Binds
 import dagger.Module
@@ -17,4 +19,10 @@ abstract class RepositoryModule {
     abstract fun bindPokemonRepository(
         pokemonRepositoryImpl: PokemonRepositoryImpl
     ): PokemonRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(
+        authRepositoryImpl: AuthRepositoryImpl
+    ): AuthRepository
 }

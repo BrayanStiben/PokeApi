@@ -10,14 +10,22 @@ data class Pokemon(
     val abilities: List<String> = emptyList(),
     val stats: List<PokemonStat> = emptyList(),
     val description: String = "",
-    val moves: List<String> = emptyList(),
+    val moves: List<PokemonMove> = emptyList(),
     val evolutionChain: List<EvolutionStep> = emptyList(),
-    val isFavorite: Boolean = false // Nuevo campo
+    val isFavorite: Boolean = false
 )
 
 data class PokemonStat(
     val name: String,
     val value: Int
+)
+
+data class PokemonMove(
+    val name: String,
+    val type: String,
+    val damageClass: String, // physical, special, status
+    val learnMethod: String, // level-up, machine, tutor, egg
+    val level: Int
 )
 
 data class EvolutionStep(

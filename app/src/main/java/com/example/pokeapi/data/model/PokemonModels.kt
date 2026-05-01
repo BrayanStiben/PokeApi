@@ -16,8 +16,8 @@ data class PokemonEntity(
     val weight: Int,
     val abilities: String,
     val description: String,
-    val moves: String = "",
-    val isFavorite: Boolean = false // Nuevo campo para favoritos
+    val moves: String = "", // Mantener como respaldo o eliminar si se usa tabla separada
+    val isFavorite: Boolean = false
 )
 
 @Entity(tableName = "pokemon_stat_table")
@@ -28,11 +28,37 @@ data class PokemonStatEntity(
     val value: Int
 )
 
+@Entity(tableName = "pokemon_move_table")
+data class PokemonMoveEntity(
+    @PrimaryKey(autoGenerate = true) val moveId: Int = 0,
+    val pokemonId: Int,
+    val name: String,
+    val type: String,
+    val damageClass: String,
+    val learnMethod: String,
+    val level: Int
+)
+
+@Entity(tableName = "move_detail_cache")
+data class MoveDetailEntity(
+    @PrimaryKey val name: String,
+    val type: String,
+    val damageClass: String
+)
+
 @Entity(tableName = "remote_keys")
 data class RemoteKeysEntity(
     @PrimaryKey val pokemonId: Int,
     val prevKey: Int?,
     val nextKey: Int?
+)
+
+@Entity(tableName = "user_table")
+data class UserEntity(
+    @PrimaryKey val trainerId: String,
+    val trainerName: String,
+    val password: String,
+    val isLogged: Boolean = false
 )
 
 // --- DTOs (Retrofit) ---
@@ -48,11 +74,25 @@ data class PokemonDetailDto(
     val types: List<TypeSlotDto>,
     val abilities: List<AbilitySlotDto>,
     val stats: List<StatSlotDto>,
-    val moves: List<MoveSlotDto>
+    val moves: List<MoveSlotDto>,
+    val species: PokemonSimpleDto
 )
 
-data class MoveSlotDto(val move: MoveDto)
-data class MoveDto(val name: String)
+data class MoveSlotDto(
+    val move: PokemonSimpleDto,
+    @SerializedName("version_group_details") val versionGroupDetails: List<VersionGroupDetailDto>
+)
+
+data class VersionGroupDetailDto(
+    @SerializedName("level_learned_at") val levelLearnedAt: Int,
+    @SerializedName("move_learn_method") val moveLearnMethod: PokemonSimpleDto
+)
+
+data class MoveDetailDto(
+    val name: String,
+    val type: TypeDto,
+    @SerializedName("damage_class") val damageClass: PokemonSimpleDto?
+)
 
 data class SpritesDto(
     @SerializedName("front_default") val frontDefault: String?,
